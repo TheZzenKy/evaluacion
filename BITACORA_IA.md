@@ -1,6 +1,6 @@
 # Bitácora de uso de IA
 
-Se utilizó IA como apoyo para revisar y desarrollar partes del proyecto Django.
+Se utilizó IA como apoyo para revisar desarrollar e revisar partes del proyecto Django.
 
 ## RF-01
 

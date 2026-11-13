@@ -363,6 +363,30 @@ class PedidosTests(TestCase):
         self.pedido.refresh_from_db()
         self.assertEqual(self.pedido.estado, "cancelado")
 
+    def test_cancelar_pedido_devuelve_el_stock(self):
+        categoria = Categoria.objects.create(nombre="Cafe")
+        producto = Producto.objects.create(
+            categoria=categoria,
+            codigo="CAF-001",
+            nombre="Cafe",
+            precio=1500,
+            stock=2,
+        )
+        DetallePedido.objects.create(
+            pedido=self.pedido,
+            producto=producto,
+            cantidad=1,
+            precio_unitario=1500,
+        )
+        producto.stock = 1
+        producto.save()
+        self.client.login(username="ana", password="1234")
+
+        self.client.post("/cliente/pedidos/1/cancelar/")
+
+        producto.refresh_from_db()
+        self.assertEqual(producto.stock, 2)
+
     def test_encargado_avanza_el_pedido_en_orden(self):
         self.client.login(username="encargado", password="1234")
 

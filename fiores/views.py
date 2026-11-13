@@ -185,8 +185,13 @@ def cancelar_pedido(request, pk):
     pedido = get_object_or_404(Pedido, pk=pk, cliente=request.user)
     if request.method == "POST":
         if pedido.estado == Pedido.Estado.PENDIENTE:
-            pedido.estado = Pedido.Estado.CANCELADO
-            pedido.save(update_fields=["estado"])
+            with transaction.atomic():
+                for detalle in pedido.detalles.all():
+                    producto = detalle.producto
+                    producto.stock += detalle.cantidad
+                    producto.save(update_fields=["stock"])
+                pedido.estado = Pedido.Estado.CANCELADO
+                pedido.save(update_fields=["estado"])
             messages.success(request, "Pedido cancelado.")
         else:
             messages.error(request, "Solo se pueden cancelar pedidos pendientes.")
