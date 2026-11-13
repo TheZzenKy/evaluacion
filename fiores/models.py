@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -26,8 +27,8 @@ class Producto(models.Model):
     )
     codigo = models.CharField(max_length=10, unique=True)
     nombre = models.CharField(max_length=100)
-    precio = models.IntegerField(validators=[MinValueValidator(0)])
-    stock = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    precio = models.IntegerField()
+    stock = models.IntegerField(default=0)
     disponible = models.BooleanField(default=True)
     creado = models.DateTimeField(default=timezone.now)
 
@@ -39,6 +40,23 @@ class Producto(models.Model):
             models.CheckConstraint(condition=models.Q(precio__gte=0), name="producto_precio_no_negativo"),
             models.CheckConstraint(condition=models.Q(stock__gte=0), name="producto_stock_no_negativo"),
         ]
+
+    def clean(self):
+        errores = {}
+
+        if (
+            len(self.codigo) != 7
+            or not self.codigo.startswith("CAF-")
+            or not self.codigo[4:].isdigit()
+        ):
+            errores["codigo"] = "El código debe tener el formato CAF-000."
+        if self.precio < 100 or self.precio > 20000:
+            errores["precio"] = "El precio debe estar entre $100 y $20.000."
+        if self.stock < 0:
+            errores["stock"] = "El stock no puede ser negativo."
+
+        if errores:
+            raise ValidationError(errores)
 
     def __str__(self):
         return self.nombre

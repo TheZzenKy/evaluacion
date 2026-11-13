@@ -1,0 +1,11 @@
+{% extends "fiores/base.html" %}
+
+{% block content %}
+    <h1>{{ categoria.nombre }}</h1>
+    <p>{{ categoria.descripcion }}</p>
+    <p>Estado: {% if categoria.activa %}Activa{% else %}Inactiva{% endif %}</p>
+    <p>Productos: {{ categoria.productos.count }}</p>
+    <p><a href="{% url 'categoria_editar' categoria.pk %}">Editar</a></p>
+    <p><a href="{% url 'categoria_eliminar' categoria.pk %}">Eliminar</a></p>
+    <p><a href="{% url 'categoria_lista' %}">Volver</a></p>
+{% endblock %}

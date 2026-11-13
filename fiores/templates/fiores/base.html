@@ -11,6 +11,8 @@
             <span>Rol: {% if user.is_staff %}Encargado{% else %}Cliente{% endif %}</span>
             {% if user.is_staff %}
                 <a href="{% url 'panel_encargado' %}">Panel de encargado</a>
+                <a href="{% url 'categoria_lista' %}">Categorías</a>
+                <a href="{% url 'producto_lista' %}">Productos</a>
             {% else %}
                 <a href="{% url 'catalogo' %}">Catálogo</a>
             {% endif %}
@@ -19,6 +21,11 @@
                 <button type="submit">Cerrar sesión</button>
             </form>
         </nav>
+    {% endif %}
+    {% if messages %}
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
     {% endif %}
     {% block content %}{% endblock %}
 </body>

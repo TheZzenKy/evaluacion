@@ -4,6 +4,7 @@ from django.db.models import ProtectedError
 from django.test import TestCase, override_settings
 
 from .admin import PedidoAdmin
+from .forms import ProductoForm
 from .models import Categoria, DetallePedido, Pedido, Producto
 
 
@@ -11,7 +12,7 @@ class ModeloDatosTests(TestCase):
     def setUp(self):
         self.categoria = Categoria.objects.create(nombre="Café")
         self.producto = Producto.objects.create(
-            codigo="CAF001",
+            codigo="CAF-001",
             nombre="Espresso",
             precio=1800,
             stock=5,
@@ -118,7 +119,7 @@ class CatalogoTests(TestCase):
         )
         Producto.objects.create(
             categoria=self.categoria,
-            codigo="CAF001",
+            codigo="CAF-001",
             nombre="Café Grande",
             precio=1500,
             stock=3,
@@ -126,7 +127,7 @@ class CatalogoTests(TestCase):
         )
         Producto.objects.create(
             categoria=self.categoria,
-            codigo="CAF002",
+            codigo="CAF-002",
             nombre="Café Agotado",
             precio=2500,
             stock=0,
@@ -134,7 +135,7 @@ class CatalogoTests(TestCase):
         )
         Producto.objects.create(
             categoria=self.otra_categoria,
-            codigo="INA001",
+            codigo="CAF-003",
             nombre="Producto Oculto",
             precio=1000,
             stock=2,
@@ -142,7 +143,7 @@ class CatalogoTests(TestCase):
         )
         Producto.objects.create(
             categoria=self.categoria,
-            codigo="NOD001",
+            codigo="CAF-004",
             nombre="Producto No Disponible",
             precio=1000,
             stock=2,
@@ -177,3 +178,74 @@ class CatalogoTests(TestCase):
             '<button type="button" disabled>Agregar al carrito</button>',
             contenido,
         )
+
+
+class GestionCatalogoTests(TestCase):
+    def setUp(self):
+        User.objects.create_user(
+            username="encargado", password="1234", is_staff=True
+        )
+        self.categoria = Categoria.objects.create(nombre="Cafes")
+        self.producto = Producto.objects.create(
+            categoria=self.categoria,
+            codigo="CAF-001",
+            nombre="Espresso",
+            precio=1800,
+            stock=5,
+        )
+
+    def test_formulario_producto(self):
+        form = ProductoForm({
+            "categoria": self.categoria.pk,
+            "codigo": "ABC",
+            "nombre": "Producto",
+            "precio": 50,
+            "stock": -1,
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertTrue("codigo" in form.errors)
+        self.assertTrue("precio" in form.errors)
+        self.assertTrue("stock" in form.errors)
+
+    def test_crear_producto(self):
+        self.client.login(username="encargado", password="1234")
+
+        response = self.client.post("/encargado/productos/crear/", {
+            "categoria": self.categoria.pk,
+            "codigo": "CAF-002",
+            "nombre": "Latte",
+            "precio": 2500,
+            "stock": 4,
+            "disponible": "on",
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Producto.objects.count(), 2)
+
+    def test_filtrar_productos(self):
+        otra_categoria = Categoria.objects.create(nombre="Tes")
+        Producto.objects.create(
+            categoria=otra_categoria,
+            codigo="TEA-001",
+            nombre="Té negro",
+            precio=1500,
+            stock=3,
+            disponible=False,
+        )
+        self.client.login(username="encargado", password="1234")
+        response = self.client.get("/encargado/productos/?q=TEA")
+
+        self.assertContains(response, "Té negro")
+        self.assertNotContains(response, "Espresso")
+
+    def test_no_elimina_categoria_con_productos(self):
+        self.client.login(username="encargado", password="1234")
+
+        url = "/encargado/categorias/" + str(self.categoria.id) + "/eliminar/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "No se puede eliminar una categoría con productos.")

@@ -1,0 +1,13 @@
+{% extends "fiores/base.html" %}
+
+{% block content %}
+    <h1>{{ producto.nombre }}</h1>
+    <p>Código: {{ producto.codigo }}</p>
+    <p>Categoría: {{ producto.categoria.nombre }}</p>
+    <p>Precio: ${{ producto.precio }}</p>
+    <p>Stock: {{ producto.stock }}</p>
+    <p>Disponible: {% if producto.disponible %}Sí{% else %}No{% endif %}</p>
+    <p><a href="{% url 'producto_editar' producto.pk %}">Editar</a></p>
+    <p><a href="{% url 'producto_eliminar' producto.pk %}">Eliminar</a></p>
+    <p><a href="{% url 'producto_lista' %}">Volver</a></p>
+{% endblock %}

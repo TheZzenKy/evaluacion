@@ -1,0 +1,40 @@
+{% extends "fiores/base.html" %}
+
+{% block content %}
+    <h1>Productos</h1>
+    <p><a href="{% url 'producto_crear' %}">Crear producto</a></p>
+    <form method="get">
+        <label for="q">Buscar</label>
+        <input id="q" name="q" value="{{ busqueda }}" placeholder="Nombre o código">
+        <label for="categoria">Categoría</label>
+        <select id="categoria" name="categoria">
+            <option value="">Todas</option>
+            {% for categoria in categorias %}
+                <option value="{{ categoria.pk }}"
+                    {% if categoria_id == categoria.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ categoria.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+        <label for="disponible">Disponibilidad</label>
+        <select id="disponible" name="disponible">
+            <option value="">Todas</option>
+            <option value="1" {% if disponible == "1" %}selected{% endif %}>Disponible</option>
+            <option value="0" {% if disponible == "0" %}selected{% endif %}>No disponible</option>
+        </select>
+        <button type="submit">Filtrar</button>
+    </form>
+    <ul>
+        {% for producto in productos %}
+            <li>
+                <a href="{% url 'producto_detalle' producto.pk %}">
+                    {{ producto.codigo }} - {{ producto.nombre }}
+                </a>
+                ({{ producto.categoria.nombre }})
+                {% if producto.disponible %}Disponible{% else %}No disponible{% endif %}
+            </li>
+        {% empty %}
+            <li>No hay productos.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}
