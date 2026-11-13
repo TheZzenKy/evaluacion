@@ -23,6 +23,7 @@ from fiores import views
 urlpatterns = [
     path("", views.inicio, name="inicio"),
     path("cliente/", views.panel_cliente, name="panel_cliente"),
+    path("cliente/catalogo/", views.catalogo, name="catalogo"),
     path("encargado/", views.panel_encargado, name="panel_encargado"),
     path(
         "iniciar-sesion/",

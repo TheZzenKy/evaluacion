@@ -80,7 +80,7 @@ class AutenticacionRolesTests(TestCase):
     def test_cliente_accede_a_su_panel_pero_no_al_panel_de_encargado(self):
         self.client.login(username="cliente", password="cliente123")
 
-        self.assertEqual(self.client.get("/cliente/").status_code, 200)
+        self.assertRedirects(self.client.get("/cliente/"), "/cliente/catalogo/")
         self.assertEqual(self.client.get("/encargado/").status_code, 403)
 
     def test_encargado_accede_a_su_panel_y_el_menu_muestra_el_rol(self):
@@ -103,3 +103,77 @@ class AutenticacionRolesTests(TestCase):
         response = self.client.post("/cerrar-sesion/")
 
         self.assertRedirects(response, "/iniciar-sesion/")
+
+
+class CatalogoTests(TestCase):
+    def setUp(self):
+        self.cliente = User.objects.create_user(
+            username="cliente_catalogo",
+            password="cliente123",
+        )
+        self.categoria = Categoria.objects.create(nombre="Cafés", activa=True)
+        self.otra_categoria = Categoria.objects.create(
+            nombre="Inactiva",
+            activa=False,
+        )
+        Producto.objects.create(
+            categoria=self.categoria,
+            codigo="CAF001",
+            nombre="Café Grande",
+            precio=1500,
+            stock=3,
+            disponible=True,
+        )
+        Producto.objects.create(
+            categoria=self.categoria,
+            codigo="CAF002",
+            nombre="Café Agotado",
+            precio=2500,
+            stock=0,
+            disponible=True,
+        )
+        Producto.objects.create(
+            categoria=self.otra_categoria,
+            codigo="INA001",
+            nombre="Producto Oculto",
+            precio=1000,
+            stock=2,
+            disponible=True,
+        )
+        Producto.objects.create(
+            categoria=self.categoria,
+            codigo="NOD001",
+            nombre="Producto No Disponible",
+            precio=1000,
+            stock=2,
+            disponible=False,
+        )
+        self.client.login(username="cliente_catalogo", password="cliente123")
+
+    def test_catalogo_solo_muestra_productos_disponibles_y_categorias_activas(self):
+        response = self.client.get("/cliente/catalogo/")
+
+        self.assertContains(response, "Café Grande")
+        self.assertContains(response, "Café Agotado")
+        self.assertNotContains(response, "Producto Oculto")
+        self.assertNotContains(response, "Producto No Disponible")
+
+    def test_catalogo_filtra_por_nombre_y_categoria(self):
+        response = self.client.get(
+            "/cliente/catalogo/?q=Grande&categoria="
+            f"{self.categoria.pk}"
+        )
+
+        self.assertContains(response, "Café Grande")
+        self.assertNotContains(response, "Café Agotado")
+
+    def test_catalogo_formatea_precios_y_marca_agotados(self):
+        response = self.client.get("/cliente/catalogo/")
+        contenido = response.content.decode()
+
+        self.assertContains(response, "$1.500")
+        self.assertContains(response, "Agotado")
+        self.assertIn(
+            '<button type="button" disabled>Agregar al carrito</button>',
+            contenido,
+        )

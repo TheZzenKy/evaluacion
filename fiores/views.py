@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 
+from .models import Categoria, Producto
+
 
 def encargado_required(view_func):
     @wraps(view_func)
@@ -25,7 +27,34 @@ def inicio(request):
 
 @login_required
 def panel_cliente(request):
-    return render(request, "fiores/panel_cliente.html")
+    return redirect("catalogo")
+
+
+@login_required
+def catalogo(request):
+    productos = Producto.objects.filter(
+        disponible=True,
+        categoria__activa=True,
+    ).select_related("categoria")
+    categorias = Categoria.objects.filter(activa=True)
+    busqueda = request.GET.get("q", "").strip()
+    categoria_id = request.GET.get("categoria", "").strip()
+
+    if busqueda:
+        productos = productos.filter(nombre__icontains=busqueda)
+    if categoria_id.isdecimal():
+        productos = productos.filter(categoria_id=int(categoria_id))
+
+    return render(
+        request,
+        "fiores/catalogo.html",
+        {
+            "productos": productos,
+            "categorias": categorias,
+            "busqueda": busqueda,
+            "categoria_id": categoria_id,
+        },
+    )
 
 
 @encargado_required

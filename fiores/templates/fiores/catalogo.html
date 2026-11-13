@@ -1,0 +1,41 @@
+{% extends "fiores/base.html" %}
+{% load fiores_filters %}
+
+{% block content %}
+    <h1>Catálogo</h1>
+    <form method="get">
+        <label for="q">Buscar por nombre</label>
+        <input id="q" name="q" type="search" value="{{ busqueda }}">
+
+        <label for="categoria">Categoría</label>
+        <select id="categoria" name="categoria">
+            <option value="">Todas</option>
+            {% for categoria in categorias %}
+                <option value="{{ categoria.id }}"
+                    {% if categoria_id == categoria.id|stringformat:"s" %}selected{% endif %}>
+                    {{ categoria.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Buscar</button>
+    </form>
+
+    <section>
+        {% for producto in productos %}
+            <article>
+                <h2>{{ producto.nombre }}</h2>
+                <p>Categoría: {{ producto.categoria.nombre }}</p>
+                <p>Precio: {{ producto.precio|peso_chileno }}</p>
+                {% if producto.stock == 0 %}
+                    <p>Agotado</p>
+                    <button type="button" disabled>Agregar al carrito</button>
+                {% else %}
+                    <p>Stock disponible: {{ producto.stock }}</p>
+                    <button type="button">Agregar al carrito</button>
+                {% endif %}
+            </article>
+        {% empty %}
+            <p>No se encontraron productos.</p>
+        {% endfor %}
+    </section>
+{% endblock %}
