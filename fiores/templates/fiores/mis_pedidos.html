@@ -1,0 +1,19 @@
+{% extends "fiores/base.html" %}
+
+{% block content %}
+    <h1>Mis pedidos</h1>
+    {% for pedido in pedidos %}
+        <p>
+            <a href="{% url 'detalle_pedido' pedido.pk %}">Pedido #{{ pedido.pk }}</a>
+            - {{ pedido.get_estado_display }} - ${{ pedido.total }}
+            {% if pedido.estado == "pendiente" %}
+                <form method="post" action="{% url 'cancelar_pedido' pedido.pk %}">
+                    {% csrf_token %}
+                    <button type="submit">Cancelar</button>
+                </form>
+            {% endif %}
+        </p>
+    {% empty %}
+        <p>No tienes pedidos.</p>
+    {% endfor %}
+{% endblock %}

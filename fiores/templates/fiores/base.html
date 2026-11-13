@@ -16,6 +16,7 @@
             {% else %}
                 <a href="{% url 'catalogo' %}">Catálogo</a>
                 <a href="{% url 'ver_carrito' %}">Carrito ({{ carrito_unidades }})</a>
+                <a href="{% url 'mis_pedidos' %}">Mis pedidos</a>
             {% endif %}
             <form method="post" action="{% url 'logout' %}" style="display: inline;">
                 {% csrf_token %}

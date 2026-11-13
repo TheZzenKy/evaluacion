@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect, render
+from django.utils import timezone
 
 from .forms import CategoriaForm, PedidoForm, ProductoForm
 from .models import Categoria, DetallePedido, Pedido, Producto
@@ -165,6 +166,66 @@ def confirmar_pedido(request):
         return redirect("panel_cliente")
 
     return render(request, "fiores/confirmar_pedido.html", {"form": form})
+
+
+@login_required
+def mis_pedidos(request):
+    pedidos = Pedido.objects.filter(cliente=request.user)
+    return render(request, "fiores/mis_pedidos.html", {"pedidos": pedidos})
+
+
+@login_required
+def detalle_pedido(request, pk):
+    pedido = get_object_or_404(Pedido, pk=pk, cliente=request.user)
+    return render(request, "fiores/detalle_pedido.html", {"pedido": pedido})
+
+
+@login_required
+def cancelar_pedido(request, pk):
+    pedido = get_object_or_404(Pedido, pk=pk, cliente=request.user)
+    if request.method == "POST":
+        if pedido.estado == Pedido.Estado.PENDIENTE:
+            pedido.estado = Pedido.Estado.CANCELADO
+            pedido.save(update_fields=["estado"])
+            messages.success(request, "Pedido cancelado.")
+        else:
+            messages.error(request, "Solo se pueden cancelar pedidos pendientes.")
+    return redirect("mis_pedidos")
+
+
+@login_required
+def pedidos_encargado(request):
+    revisar_encargado(request)
+    pedidos = Pedido.objects.filter(fecha__date=timezone.localdate())
+    estado = request.GET.get("estado", "")
+    if estado:
+        pedidos = pedidos.filter(estado=estado)
+    return render(request, "fiores/pedidos_encargado.html", {
+        "pedidos": pedidos,
+        "estados": Pedido.Estado.choices,
+        "estado": estado,
+    })
+
+
+@login_required
+def avanzar_pedido(request, pk):
+    revisar_encargado(request)
+    pedido = get_object_or_404(Pedido, pk=pk)
+    estados = [
+        Pedido.Estado.PENDIENTE,
+        Pedido.Estado.PREPARANDO,
+        Pedido.Estado.LISTO,
+        Pedido.Estado.ENTREGADO,
+    ]
+    if request.method == "POST":
+        if pedido.estado in estados and pedido.estado != estados[-1]:
+            posicion = estados.index(pedido.estado)
+            pedido.estado = estados[posicion + 1]
+            pedido.save(update_fields=["estado"])
+            messages.success(request, "Estado actualizado.")
+        else:
+            messages.error(request, "El pedido no se puede avanzar.")
+    return redirect("pedidos_encargado")
 
 
 @login_required

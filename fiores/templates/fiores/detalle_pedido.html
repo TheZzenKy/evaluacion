@@ -1,0 +1,13 @@
+{% extends "fiores/base.html" %}
+
+{% block content %}
+    <h1>Pedido #{{ pedido.pk }}</h1>
+    <p>Estado: {{ pedido.get_estado_display }}</p>
+    <p>Total: ${{ pedido.total }}</p>
+    <ul>
+        {% for detalle in pedido.detalles.all %}
+            <li>{{ detalle.cantidad }} x {{ detalle.producto.nombre }} - ${{ detalle.subtotal }}</li>
+        {% endfor %}
+    </ul>
+    <a href="{% url 'mis_pedidos' %}">Volver</a>
+{% endblock %}

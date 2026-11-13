@@ -30,6 +30,9 @@ urlpatterns = [
     path("cliente/carrito/quitar/<int:pk>/", views.carrito, name="quitar_carrito"),
     path("cliente/carrito/vaciar/", views.carrito, name="vaciar_carrito"),
     path("cliente/pedido/confirmar/", views.confirmar_pedido, name="confirmar_pedido"),
+    path("cliente/pedidos/", views.mis_pedidos, name="mis_pedidos"),
+    path("cliente/pedidos/<int:pk>/", views.detalle_pedido, name="detalle_pedido"),
+    path("cliente/pedidos/<int:pk>/cancelar/", views.cancelar_pedido, name="cancelar_pedido"),
     path("encargado/", views.panel_encargado, name="panel_encargado"),
     path("encargado/categorias/", views.categoria_lista, name="categoria_lista"),
     path("encargado/categorias/crear/", views.categoria_crear, name="categoria_crear"),
@@ -41,6 +44,8 @@ urlpatterns = [
     path("encargado/productos/<int:pk>/", views.producto_detalle, name="producto_detalle"),
     path("encargado/productos/<int:pk>/editar/", views.producto_editar, name="producto_editar"),
     path("encargado/productos/<int:pk>/eliminar/", views.producto_eliminar, name="producto_eliminar"),
+    path("encargado/pedidos/", views.pedidos_encargado, name="pedidos_encargado"),
+    path("encargado/pedidos/<int:pk>/avanzar/", views.avanzar_pedido, name="avanzar_pedido"),
     path(
         "iniciar-sesion/",
         auth_views.LoginView.as_view(template_name="fiores/login.html"),

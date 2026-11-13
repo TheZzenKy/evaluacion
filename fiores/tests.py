@@ -321,3 +321,52 @@ class CarritoTests(TestCase):
         })
 
         self.assertEqual(Pedido.objects.count(), 0)
+
+
+class PedidosTests(TestCase):
+    def setUp(self):
+        self.cliente = User.objects.create_user(
+            username="ana",
+            password="1234",
+        )
+        self.otro_cliente = User.objects.create_user(
+            username="juan",
+            password="1234",
+        )
+        self.encargado = User.objects.create_user(
+            username="encargado",
+            password="1234",
+            is_staff=True,
+        )
+        self.pedido = Pedido.objects.create(
+            cliente=self.cliente,
+            hora_retiro="12:00",
+            total=3000,
+        )
+
+    def test_cliente_ve_solo_sus_pedidos(self):
+        self.client.login(username="ana", password="1234")
+
+        respuesta = self.client.get("/cliente/pedidos/")
+
+        self.assertContains(respuesta, "Pedido #1")
+        self.assertEqual(
+            self.client.get("/cliente/pedidos/2/").status_code,
+            404,
+        )
+
+    def test_cliente_puede_cancelar_pedido_pendiente(self):
+        self.client.login(username="ana", password="1234")
+
+        self.client.post("/cliente/pedidos/1/cancelar/")
+
+        self.pedido.refresh_from_db()
+        self.assertEqual(self.pedido.estado, "cancelado")
+
+    def test_encargado_avanza_el_pedido_en_orden(self):
+        self.client.login(username="encargado", password="1234")
+
+        self.client.post("/encargado/pedidos/1/avanzar/")
+        self.pedido.refresh_from_db()
+
+        self.assertEqual(self.pedido.estado, "preparando")

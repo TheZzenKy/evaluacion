@@ -1,0 +1,30 @@
+{% extends "fiores/base.html" %}
+
+{% block content %}
+    <h1>Pedidos de hoy</h1>
+    <form method="get">
+        <select name="estado">
+            <option value="">Todos</option>
+            {% for valor, nombre in estados %}
+                <option value="{{ valor }}" {% if estado == valor %}selected{% endif %}>
+                    {{ nombre }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Filtrar</button>
+    </form>
+    {% for pedido in pedidos %}
+        <p>
+            Pedido #{{ pedido.pk }} - {{ pedido.cliente.username }} -
+            {{ pedido.get_estado_display }} - ${{ pedido.total }}
+        </p>
+        {% if pedido.estado != "entregado" and pedido.estado != "cancelado" %}
+            <form method="post" action="{% url 'avanzar_pedido' pedido.pk %}">
+                {% csrf_token %}
+                <button type="submit">Avanzar estado</button>
+            </form>
+        {% endif %}
+    {% empty %}
+        <p>No hay pedidos.</p>
+    {% endfor %}
+{% endblock %}
