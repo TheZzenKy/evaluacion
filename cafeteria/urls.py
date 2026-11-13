@@ -15,8 +15,24 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.urls import path
 
+from fiores import views
+
 urlpatterns = [
+    path("", views.inicio, name="inicio"),
+    path("cliente/", views.panel_cliente, name="panel_cliente"),
+    path("encargado/", views.panel_encargado, name="panel_encargado"),
+    path(
+        "iniciar-sesion/",
+        auth_views.LoginView.as_view(template_name="fiores/login.html"),
+        name="login",
+    ),
+    path(
+        "cerrar-sesion/",
+        auth_views.LogoutView.as_view(),
+        name="logout",
+    ),
     path('admin/', admin.site.urls),
 ]

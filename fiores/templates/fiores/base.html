@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Fiores</title>
+</head>
+<body>
+    {% if user.is_authenticated %}
+        <nav>
+            <span>Usuario: {{ user.get_username }}</span>
+            <span>Rol: {% if user.is_staff %}Encargado{% else %}Cliente{% endif %}</span>
+            {% if user.is_staff %}
+                <a href="{% url 'panel_encargado' %}">Panel de encargado</a>
+            {% else %}
+                <a href="{% url 'panel_cliente' %}">Panel de cliente</a>
+            {% endif %}
+            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit">Cerrar sesión</button>
+            </form>
+        </nav>
+    {% endif %}
+    {% block content %}{% endblock %}
+</body>
+</html>
