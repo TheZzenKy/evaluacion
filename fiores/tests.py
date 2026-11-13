@@ -1,10 +1,13 @@
+from datetime import datetime
+from unittest.mock import patch
+
 from django.contrib.admin.sites import site
 from django.contrib.auth.models import User
 from django.db.models import ProtectedError
 from django.test import TestCase, override_settings
 
 from .admin import PedidoAdmin
-from .forms import ProductoForm
+from .forms import PedidoForm, ProductoForm
 from .models import Categoria, DetallePedido, Pedido, Producto
 
 
@@ -249,3 +252,72 @@ class GestionCatalogoTests(TestCase):
         response = self.client.post(url, follow=True)
 
         self.assertContains(response, "No se puede eliminar una categoría con productos.")
+
+
+class CarritoTests(TestCase):
+    def setUp(self):
+        self.cliente = User.objects.create_user(
+            username="cliente_carrito",
+            password="1234",
+        )
+        self.categoria = Categoria.objects.create(nombre="Cafes")
+        self.producto = Producto.objects.create(
+            categoria=self.categoria,
+            codigo="CAF-001",
+            nombre="Cafe",
+            precio=1500,
+            stock=3,
+        )
+        self.client.login(username="cliente_carrito", password="1234")
+
+    def test_agregar_producto_al_carrito(self):
+        self.client.post(
+            "/cliente/carrito/agregar/1/",
+            {"accion": "agregar"},
+        )
+
+        carrito = self.client.session["carrito"]
+        self.assertEqual(carrito["1"], 1)
+
+    def test_no_agrega_mas_productos_que_el_stock(self):
+        for i in range(4):
+            self.client.post(
+                "/cliente/carrito/agregar/1/",
+                {"accion": "agregar"},
+            )
+
+        self.assertEqual(self.client.session["carrito"]["1"], 3)
+
+    def test_formulario_pedido_revisa_la_hora(self):
+        form = PedidoForm({"hora_retiro": "07:00"})
+
+        self.assertFalse(form.is_valid())
+
+    @patch("fiores.forms.timezone.localtime")
+    def test_confirmar_pedido(self, hora):
+        hora.return_value = datetime(2026, 1, 1, 10, 0)
+        self.client.post("/cliente/carrito/agregar/1/", {"accion": "agregar"})
+
+        response = self.client.post("/cliente/pedido/confirmar/", {
+            "hora_retiro": "11:00",
+            "observaciones": "Sin azúcar",
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Pedido.objects.count(), 1)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 2)
+        self.assertEqual(self.client.session["carrito"], {})
+
+    @patch("fiores.forms.timezone.localtime")
+    def test_no_crea_pedido_si_no_hay_stock(self, hora):
+        hora.return_value = datetime(2026, 1, 1, 10, 0)
+        self.client.post("/cliente/carrito/agregar/1/", {"accion": "agregar"})
+        self.producto.stock = 0
+        self.producto.save()
+
+        self.client.post("/cliente/pedido/confirmar/", {
+            "hora_retiro": "11:00",
+        })
+
+        self.assertEqual(Pedido.objects.count(), 0)

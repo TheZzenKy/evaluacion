@@ -31,7 +31,11 @@
                     <button type="button" disabled>Agregar al carrito</button>
                 {% else %}
                     <p>Stock disponible: {{ producto.stock }}</p>
-                    <button type="button">Agregar al carrito</button>
+                    <form method="post" action="{% url 'agregar_carrito' producto.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="agregar">
+                        <button type="submit">Agregar al carrito</button>
+                    </form>
                 {% endif %}
             </article>
         {% empty %}

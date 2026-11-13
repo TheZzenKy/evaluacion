@@ -1,0 +1,40 @@
+{% extends "fiores/base.html" %}
+
+{% block content %}
+    <h1>Carrito</h1>
+    {% if items %}
+        <form method="post" action="{% url 'actualizar_carrito' %}">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="actualizar">
+            {% for item in items %}
+                <p>
+                    {{ item.producto.nombre }} -
+                    ${{ item.producto.precio }} -
+                    <input type="number" name="cantidad_{{ item.producto.pk }}"
+                           value="{{ item.cantidad }}" min="0">
+                    Subtotal: ${{ item.subtotal }}
+                </p>
+            {% endfor %}
+            <p>Total: ${{ total }}</p>
+            <button type="submit">Actualizar carrito</button>
+        </form>
+        <form method="post" action="{% url 'confirmar_pedido' %}">
+            {% csrf_token %}
+            <button type="submit">Continuar al pedido</button>
+        </form>
+        <form method="post" action="{% url 'vaciar_carrito' %}">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="vaciar">
+            <button type="submit">Vaciar carrito</button>
+        </form>
+        {% for item in items %}
+            <form method="post" action="{% url 'quitar_carrito' item.producto.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="quitar">
+                <button type="submit">Quitar {{ item.producto.nombre }}</button>
+            </form>
+        {% endfor %}
+    {% else %}
+        <p>El carrito está vacío.</p>
+    {% endif %}
+{% endblock %}

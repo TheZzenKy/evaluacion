@@ -1,0 +1,11 @@
+{% extends "fiores/base.html" %}
+
+{% block content %}
+    <h1>Confirmar pedido</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Confirmar pedido</button>
+    </form>
+    <p><a href="{% url 'ver_carrito' %}">Volver al carrito</a></p>
+{% endblock %}

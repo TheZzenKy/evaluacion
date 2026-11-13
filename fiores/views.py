@@ -1,12 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect, render
 
-from .forms import CategoriaForm, ProductoForm
-from .models import Categoria, Producto
+from .forms import CategoriaForm, PedidoForm, ProductoForm
+from .models import Categoria, DetallePedido, Pedido, Producto
 
 
 def revisar_encargado(request):
@@ -51,6 +52,119 @@ def catalogo(request):
             "categoria_id": categoria_id,
         },
     )
+
+
+@login_required
+def carrito(request, pk=None):
+    carrito = request.session.get("carrito", {})
+
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+
+        if accion == "agregar":
+            producto = get_object_or_404(Producto, pk=pk)
+            cantidad = int(carrito.get(str(pk), 0))
+            if cantidad + 1 > producto.stock:
+                messages.error(request, "No hay suficiente stock.")
+            elif sum(carrito.values()) + 1 > 10:
+                messages.error(request, "No puede agregar más de 10 unidades.")
+            else:
+                carrito[str(pk)] = cantidad + 1
+                request.session["carrito"] = carrito
+                request.session.modified = True
+            return redirect("catalogo")
+
+        if accion == "actualizar":
+            nuevo_carrito = {}
+            unidades = 0
+            for clave in carrito:
+                cantidad = int(request.POST.get("cantidad_" + clave, 0))
+                producto = Producto.objects.get(pk=clave)
+                if cantidad > producto.stock:
+                    messages.error(request, "La cantidad supera el stock.")
+                    return redirect("ver_carrito")
+                if cantidad > 0:
+                    nuevo_carrito[clave] = cantidad
+                    unidades += cantidad
+            if unidades > 10:
+                messages.error(request, "No puede tener más de 10 unidades.")
+            else:
+                request.session["carrito"] = nuevo_carrito
+                request.session.modified = True
+            return redirect("ver_carrito")
+
+        if accion == "quitar":
+            carrito.pop(str(pk), None)
+            request.session["carrito"] = carrito
+            request.session.modified = True
+            return redirect("ver_carrito")
+
+        if accion == "vaciar":
+            request.session["carrito"] = {}
+            request.session.modified = True
+            return redirect("ver_carrito")
+
+    productos = Producto.objects.filter(pk__in=carrito.keys())
+    items = []
+    total = 0
+
+    for producto in productos:
+        cantidad = int(carrito[str(producto.pk)])
+        subtotal = cantidad * producto.precio
+        items.append({"producto": producto, "cantidad": cantidad, "subtotal": subtotal})
+        total += subtotal
+
+    return render(request, "fiores/carrito.html", {"items": items, "total": total})
+
+
+@login_required
+def confirmar_pedido(request):
+    carrito = request.session.get("carrito", {})
+    if not carrito:
+        messages.error(request, "El carrito está vacío.")
+        return redirect("ver_carrito")
+
+    form = PedidoForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            productos = Producto.objects.select_for_update().filter(pk__in=carrito.keys())
+            total = 0
+            unidades = 0
+            for producto in productos:
+                cantidad = int(carrito[str(producto.pk)])
+                if cantidad > producto.stock:
+                    messages.error(request, "No hay stock suficiente de " + producto.nombre)
+                    return render(request, "fiores/confirmar_pedido.html", {"form": form})
+                total += cantidad * producto.precio
+                unidades += cantidad
+
+            if unidades > 10:
+                messages.error(request, "El pedido no puede tener más de 10 unidades.")
+                return render(request, "fiores/confirmar_pedido.html", {"form": form})
+
+            pedido = Pedido.objects.create(
+                cliente=request.user,
+                hora_retiro=form.cleaned_data["hora_retiro"],
+                observaciones=form.cleaned_data["observaciones"],
+                total=total,
+            )
+            for producto in productos:
+                cantidad = int(carrito[str(producto.pk)])
+                DetallePedido.objects.create(
+                    pedido=pedido,
+                    producto=producto,
+                    cantidad=cantidad,
+                    precio_unitario=producto.precio,
+                )
+                producto.stock -= cantidad
+                producto.save(update_fields=["stock"])
+
+        request.session["carrito"] = {}
+        request.session.modified = True
+        messages.success(request, "Pedido confirmado correctamente.")
+        return redirect("panel_cliente")
+
+    return render(request, "fiores/confirmar_pedido.html", {"form": form})
 
 
 @login_required
